@@ -3,10 +3,23 @@ Brian Gravelle
 
 useful stuff for processing mictest data in the python notebooks here
 '''
+
+
+
+
+################################################################################################################
+
+#                                                    Imports
+
+################################################################################################################
+
+
 import os
 from os import listdir
 from os.path import isfile, join
+
 import sys
+
 try:
     import taucmdr
 except ImportError:
@@ -18,6 +31,7 @@ finally:
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.style.use('ggplot')
+
 import pandas as pd
 import math
 import numpy as np
@@ -46,6 +60,7 @@ def get_pandas_non_summary():
     returns a dictionary of pandas
     keys are the metrics that each panda has data for
     vals are the pandas that have the data organized however they organzed it
+    DEPRECATED - may not work
     '''
     num_trials = Project.selected().experiment().num_trials
     trials = Project.selected().experiment().trials(xrange(0, num_trials))
@@ -77,7 +92,9 @@ def get_pandas_non_summary():
 def get_pandas(path):
     '''
     returns a dictionary of pandas
-    keys are the metrics that each panda has data for
+        - keys are the metrics that each panda has data for
+    params
+        - path is the path to 
     vals are the pandas that have the data organized however they organzed it
         - samples are turned into summaries
         - tau cmdr must be installed and .tau with the relevant data must be in this dir
@@ -91,13 +108,13 @@ def get_pandas(path):
     for p in paths:
         d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
         prof_data = TauTrialProfileData.parse(p+'/'+d[0])
+        time_data = TauTrialProfileData.parse(p+'/MULTI__TIME')
+        prof_data.metadata = time_data.metadata
         metric = prof_data.metric
         metric_data[metric] = prof_data.summarize_samples()
         metric_data[metric].index.names = ['rank', 'context', 'thread', 'region']
+        metric_data['METADATA'] = prof_data.metadata
     return metric_data
-
-
-
 
 def get_pandas_scaling(path):
     '''
@@ -130,6 +147,29 @@ def get_pandas_scaling(path):
             metric_data[num_treads][metric].index.names = ['rank', 'context', 'thread', 'region']
 
     return metric_data
+
+
+
+
+################################################################################################################
+
+#                                   Printing Information about the data
+
+################################################################################################################
+
+
+def print_metadata(data):
+    
+    for key in data['METADATA']:
+        print('{:50} {}'.format(key,data['METADATA'][key] ))
+
+
+def print_available_metrics(data):
+    
+    for key in data:
+        if not key == 'METADATA':
+            print(key)
+
 
 
 
