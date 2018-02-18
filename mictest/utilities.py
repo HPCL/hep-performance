@@ -89,6 +89,15 @@ def get_pandas_non_summary():
     
     return metric_data
 
+def load_perf_data(application,experiment):
+    '''
+        Return a Pandas dictionary from data in the detault path
+    '''
+    path = ".tau/" + application + "/" + experiment + "/"
+    if not os.path.exists(path):
+        sys.exit("Error: invalid data path: %s" % path)
+    return get_pandas(path = ".tau/" + application + "/" + experiment + "/")
+
 def get_pandas(path):
     '''
     returns a dictionary of pandas
@@ -99,7 +108,8 @@ def get_pandas(path):
         - samples are turned into summaries
         - tau cmdr must be installed and .tau with the relevant data must be in this dir
     '''
-    
+    if not os.path.exists(path):
+        sys.exit("Error: invalid data path: %s" % path)
     metric_data = {}
     
     paths = [path+n+'/' for n in listdir(path) if (not isfile(join(path, n)))]
