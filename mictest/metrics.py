@@ -59,6 +59,32 @@ def add_CPI(metrics):
         
     return True
 
+def add_VIPC(metrics):
+    '''
+    add Instructions per cycle to the metrics dictionary
+    returns true if successful
+    '''
+    INS = 'PAPI_TOT_INS'
+    CYC = 'PAPI_TOT_CYC'
+    VEC = 'PAPI_NATIVE_UOPS_RETIRED:PACKED_SIMD'
+    
+
+    if(not (metrics.has_key(CYC) and metrics.has_key(VEC)) ):
+        print "ERROR adding VecEfficiency to metric dictionary"
+        return False
+    
+    vec = metrics[VEC].copy()
+    cyc = metrics[CYC].copy()
+    vec.index = vec.index.droplevel()
+    cyc.index = cyc.index.droplevel()
+
+    uvec = vec.unstack()
+    ucyc = cyc.unstack()
+
+    metrics['DERIVED_VIPC'] = (uvec / ucyc).stack()
+
+    return True
+
 
 def add_L1_missrate(metrics):
     '''
