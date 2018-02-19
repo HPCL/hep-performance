@@ -31,6 +31,10 @@ finally:
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.style.use('ggplot')
+font = {'weight' : 'bold',
+        'size'   : 24
+}
+matplotlib.rc('font', **font)
 
 import pandas as pd
 import math
@@ -39,6 +43,7 @@ import operator
 import time
 import re
 import collections
+import seaborn as sns
 # for fancy tables
 from IPython.core.display import display, HTML, display_html
 
@@ -89,14 +94,22 @@ def get_pandas_non_summary():
     
     return metric_data
 
-def load_perf_data(application,experiment):
+def load_perf_data(application,experiment,nolibs=False):
     '''
         Return a Pandas dictionary from data in the detault path
     '''
     path = ".tau/" + application + "/" + experiment + "/"
     if not os.path.exists(path):
         sys.exit("Error: invalid data path: %s" % path)
-    return get_pandas(path = ".tau/" + application + "/" + experiment + "/")
+    metric_dict = get_pandas(path = ".tau/" + application + "/" + experiment + "/")
+    if nolibs:
+        filtered_dict = {}
+        for k,v in metric_dict.items():
+            if k == 'METADATA': filtered_dict[k] = metric_dict[k]
+            else: filtered_dict[k] = filter_libs_out(metric_dict[k])
+        return filtered_dict
+    else:
+        return metric_dict
 
 def get_pandas(path):
     '''
@@ -163,7 +176,7 @@ def get_pandas_scaling(path):
 
 ################################################################################################################
 
-#                                   Printing Information about the data
+#                                   Printing and plotting data
 
 ################################################################################################################
 
@@ -180,8 +193,13 @@ def print_available_metrics(data):
         if not key == 'METADATA':
             print(key)
 
+def set_chart_font_size(fntsize):
+    font = {'size'   : fntsize}; matplotlib.rc('font', **font)
 
-
+def bar_chart(dfs,x='region',y='Inclusive',size=(15,7)):
+    fig, ax = plt.subplots(figsize=size)
+    dfs.plot(ax = ax, kind='bar')
+    return fig
 
 
 ################################################################################################################
@@ -210,6 +228,22 @@ def largest_exclusive(dfs,n):
 def largest_inclusive(dfs,n):
     return dfs['Inclusive'].groupby(level='region').max().nlargest(n)
 
+def means(dfs, inclusive=True, sort=True, plot=False):
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+    temp = dfs.groupby('region')[which].sum().reset_index().groupby('region').mean()
+    if sort: temp = temp.sort_values(by=which,ascending=False)
+    if plot: bar_chart(temp)
+    return temp
+
+def thread_stddev(dfs, inclusive=True, sort=True, plot=False):
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+    temp = dfs.groupby(['thread','region'])[which].sum().reset_index().groupby(['thread']).std()
+    if plot: bar_chart(temp)
+    if sort: return temp.sort_values(by=which,ascending=False)
+    else: return temp
+
 def hotspots(dfs, n, flag):
     if flag == 0:
         largest = largest_exclusive(dfs,n)
@@ -230,6 +264,15 @@ def hotspots(dfs, n, flag):
             print('%s: %s (%s)' %(i+1, largest.index[i], largest[i]))
         except:
             break
+
+def get_hotspots(metric,n=10):
+    print('selected metric: %s\n' %metric)
+    hotspots(expr_intervals[metric], n, 1)
+    
+    print('='*80)
+    
+    filtered_dfs = filter_libs_out(expr_intervals[metric])
+    hotspots(filtered_dfs, n, 1)
 
 
 ################################################################################################################
