@@ -7,11 +7,11 @@ useful stuff for processing mictest data in the python notebooks here
 
 
 
-################################################################################################################
+############################################################################################
 
 #                                                    Imports
 
-################################################################################################################
+############################################################################################
 
 
 import os
@@ -51,11 +51,11 @@ from IPython.core.display import display, HTML, display_html
 
 
 
-################################################################################################################
+############################################################################################
 
 #                                   retrieving data from profiles
 
-################################################################################################################
+############################################################################################
 
 
 
@@ -135,6 +135,7 @@ def get_pandas(path):
         prof_data.metadata = time_data.metadata
         metric = prof_data.metric
         metric_data[metric] = prof_data.summarize_samples()
+        metric_data[metric]['Function'] = metric_data[metric]['region']
         metric_data[metric].index.names = ['rank', 'context', 'thread', 'region']
         metric_data['METADATA'] = prof_data.metadata
     return metric_data
@@ -174,11 +175,11 @@ def get_pandas_scaling(path):
 
 
 
-################################################################################################################
+############################################################################################
 
 #                                   Printing and plotting data
 
-################################################################################################################
+############################################################################################
 
 
 def print_metadata(data):
@@ -202,11 +203,11 @@ def bar_chart(dfs,x='region',y='Inclusive',size=(15,7)):
     return fig
 
 
-################################################################################################################
+############################################################################################
 
 #                                   Hotspots and related filtering functions
 
-################################################################################################################
+############################################################################################
 
 
 
@@ -244,6 +245,14 @@ def thread_stddev(dfs, inclusive=True, sort=True, plot=False):
     if sort: return temp.sort_values(by=which,ascending=False)
     else: return temp
 
+def thread_variance(dfs, inclusive=True, sort=True, plot=False):
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+    temp = dfs.groupby(['thread','region'])[which].sum().reset_index().groupby(['thread']).var()
+    if plot: bar_chart(temp)
+    if sort: return temp.sort_values(by=which,ascending=False)
+    else: return temp
+
 def hotspots(dfs, n, flag):
     if flag == 0:
         largest = largest_exclusive(dfs,n)
@@ -275,11 +284,11 @@ def get_hotspots(metric,n=10):
     hotspots(filtered_dfs, n, 1)
 
 
-################################################################################################################
+############################################################################################
 
 #                                   Stuff that was supposed to print prety tables
 
-################################################################################################################
+############################################################################################
 
 # UTILITIES (NOT WORKING)
 # TODO make this work
