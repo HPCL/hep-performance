@@ -61,10 +61,9 @@ def add_CPI(metrics):
 
 def add_VIPC(metrics):
     '''
-    add Instructions per cycle to the metrics dictionary
+    add vector instructions per cycle to the metrics dictionary
     returns true if successful
     '''
-    INS = 'PAPI_TOT_INS'
     CYC = 'PAPI_TOT_CYC'
     VEC = 'PAPI_NATIVE_UOPS_RETIRED:PACKED_SIMD'
     
@@ -82,6 +81,31 @@ def add_VIPC(metrics):
     ucyc = cyc.unstack()
 
     metrics['DERIVED_VIPC'] = (uvec / ucyc).stack()
+
+    return True
+
+def add_VIPI(metrics):
+    '''
+    add vector instructions per cycle to the metrics dictionary
+    returns true if successful
+    '''
+    INS = 'PAPI_TOT_INS'
+    VEC = 'PAPI_NATIVE_UOPS_RETIRED:PACKED_SIMD'
+    
+
+    if(not (metrics.has_key(INS) and metrics.has_key(VEC)) ):
+        print "ERROR adding VecEfficiency to metric dictionary"
+        return False
+    
+    vec = metrics[VEC].copy()
+    ins = metrics[INS].copy()
+    vec.index = vec.index.droplevel()
+    ins.index = ins.index.droplevel()
+
+    uvec = vec.unstack()
+    uins = ins.unstack()
+
+    metrics['DERIVED_VIPI'] = (uvec / uins).stack()
 
     return True
 
@@ -125,6 +149,15 @@ def plot_metric(dfs, metric, function='', inc_exc='Inclusive', percent=False):
     g = sns.barplot(x='Thread Number', y=inc_exc, data=metricdf_fun)
     return metricdf_fun, g
 
+def compute_correlations(metrics_dict, inc_exc='Inclusive',highlight_threshold=0.5):
+    # Compute and display pair-wise metrics correlations, highlighting the 
+    # values greater than highlight_threshold.
+    alldata = combine_metrics(metrics_dict,'Inclusive')
+    correlations = alldata.corr()
+    correlations = correlations.style.format("{:.2%}").apply(
+           lambda x: ["background: yellow" if v > 0.5 else "" for v in x], axis = 1)
+    return correlations
+
 def gen_metric(met_list, name):
     func = "def add_" + name + "(metrics):\n"
 
@@ -144,4 +177,6 @@ def gen_metric(met_list, name):
         
     
     return func
+
+
 
