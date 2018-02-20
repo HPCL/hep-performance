@@ -225,6 +225,11 @@ def highlight_max(data, color='yellow'):
         return pd.DataFrame(np.where(is_max, attr, ''),
                             index=data.index, columns=data.columns)
     
+def highlight(df, fmt="{:.2%}", ht=0.5, hcolor='yellow'):
+    return df.style.format(fmt).apply(lambda x: ["background: %s" % hcolor if v >= ht else "" for v in x], axis = 1)
+
+def highlight_higher(x):
+    return ["background: yellow" if v > 0.8 else "" for v in x]
 
 ############################################################################################
 
