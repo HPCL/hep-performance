@@ -112,6 +112,19 @@ def add_L1_missrate(metrics):
         
     return True
 
+def plot_metric(dfs, metric, function='', inc_exc='Inclusive', percent=False):
+    # inc_exc is either Inclusive or Exclusive
+    metricdf = dfs[metric]
+    if function:
+        metricdf_fun = metricdf.loc[metricdf.index.get_level_values('region').str.contains(function)].copy()
+    else:
+        metricdf_fun = metricdf.copy()
+    metricdf_fun['Thread Number'] = metricdf_fun.index.get_level_values('thread')
+    if percent:
+        metricdf_fun.style.format({inc_exc: '{:,.2%}'.format})
+    g = sns.barplot(x='Thread Number', y=inc_exc, data=metricdf_fun)
+    return metricdf_fun, g
+
 def gen_metric(met_list, name):
     func = "def add_" + name + "(metrics):\n"
 
