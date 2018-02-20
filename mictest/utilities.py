@@ -135,7 +135,6 @@ def get_pandas(path):
         prof_data.metadata = time_data.metadata
         metric = prof_data.metric
         metric_data[metric] = prof_data.summarize_samples()
-        metric_data[metric]['Function'] = metric_data[metric]['region']
         metric_data[metric].index.names = ['rank', 'context', 'thread', 'region']
         metric_data['METADATA'] = prof_data.metadata
     return metric_data
