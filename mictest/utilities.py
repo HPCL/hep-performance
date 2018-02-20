@@ -175,13 +175,13 @@ def get_pandas_scaling(path):
 def combine_metrics(metric_dict,inc_exc='Inclusive'):
     if inc_exc == 'Inclusive': todrop = 'Exclusive'
     else: todrop = 'Inclusive'
-    alldata = expr_intervals['PAPI_TOT_CYC'].copy().drop(['Calls','Subcalls',todrop,'ProfileCalls'], axis=1)
+    alldata = metric_dict['PAPI_TOT_CYC'].copy().drop(['Calls','Subcalls',todrop,'ProfileCalls'], axis=1)
     alldata['PAPI_TOT_CYC'] = alldata[inc_exc]
     alldata.drop([inc_exc],axis=1,inplace=True)
 
-    for x in expr_intervals.keys():
+    for x in metric_dict.keys():
         if x in ['PAPI_TOT_CYC','METADATA']: continue
-        alldata[x] = expr_intervals[x][inc_exc]
+        alldata[x] = metric_dict[x][inc_exc]
     return alldata
                   
 
