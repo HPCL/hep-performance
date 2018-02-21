@@ -1,7 +1,8 @@
 '''
-Brian Gravelle
+Brian Gravelle, Boyana
 
-useful stuff for processing mictest data in the python notebooks here
+Useful functions for processing mictest data in the python notebooks 
+This will evolve into a real library
 '''
 
 
@@ -142,46 +143,6 @@ def get_pandas(path, callpaths=False):
             metric_data[metric] = metric_data[metric][~metric_data[metric].index.get_level_values('region').str.contains(".TAU application")]
             
         metric_data['METADATA'] = prof_data.metadata
-    return metric_data
-
-
-def get_pandas_multi_run(path):
-    '''
-    returns a dictionary of pandas
-        - keys are the metrics that each panda has data for
-        - multiple runs are stored as lists in dict
-    params
-        - path is the path to 
-    vals are the pandas that have the data organized however they organzed it
-        - samples are turned into summaries
-        - tau cmdr must be installed and .tau with the relevant data must be in this dir
-    '''
-    if not os.path.exists(path):
-        sys.exit("Error: invalid data path: %s" % path)
-    metric_data = {}
-    
-    paths = [path+n+'/' for n in listdir(path) if (not isfile(join(path, n)))]
-    num_trials = len(paths)
-    #files = [f for f in listdir(path) if not isfile(join(p, f))]
-    for p in paths:
-        d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
-        prof_data = TauTrialProfileData.parse(p+'/'+d[0])
-        time_data = TauTrialProfileData.parse(p+'/MULTI__TIME')
-        prof_data.metadata = time_data.metadata
-        metric = prof_data.metric
-        data = prof_data.summarize_samples()
-        try:
-            metric_data[metric].append(data)
-        except:
-            metric_data[metric] = [data]
-        metric_data[metric][-1].index.names = ['rank', 'context', 'thread', 'region']
-
-
-        try:
-            metric_data['METADATA'].append(prof_data.metadata)
-        except:
-            metric_data['METADATA'] = [prof_data.metadata]
-         
     return metric_data
 
 def get_pandas_scaling(path):
