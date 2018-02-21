@@ -179,4 +179,24 @@ def gen_metric(met_list, name):
     return func
 
 
+def gen_metric_complete(met_list, operation, name):
+    func = "def add_" + name + "(metrics):\n"
+
+    for m in range(len(met_list)):
+
+        func += "\tif (not metrics.has_key(" + met_list[m] + ")):\n"
+        func += "\t\tprint 'ERROR adding " + name + " to metric dictionary'\n"
+        func += "\t\treturn False"
+
+        func += "\ta" + str(m) + " = metrics[" + met_list[m] + "].copy()\n"
+        func += "\ta" + str(m) + ".index = a" + str(m) + ".index.droplevel()\n"
+        func += "\tu" + str(m) + " = a" + str(m) + ".unstack()\n"
+    
+        operation.replace(met_list[m], "u" + str(m))
+
+    func += "\tmetrics[" + name + "] = " + operation + "\n\n"
+    func += "\treturn True\n\n\n"
+        
+    
+    return func
 
