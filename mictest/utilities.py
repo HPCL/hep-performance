@@ -172,7 +172,18 @@ def get_pandas_scaling(path):
     return metric_data
 
 
+def combine_metrics(metric_dict,inc_exc='Inclusive'):
+    if inc_exc == 'Inclusive': todrop = 'Exclusive'
+    else: todrop = 'Inclusive'
+    alldata = metric_dict['PAPI_TOT_CYC'].copy().drop(['Calls','Subcalls',todrop,'ProfileCalls'], axis=1)
+    alldata['PAPI_TOT_CYC'] = alldata[inc_exc]
+    alldata.drop([inc_exc],axis=1,inplace=True)
 
+    for x in metric_dict.keys():
+        if x in ['PAPI_TOT_CYC','METADATA']: continue
+        alldata[x] = metric_dict[x][inc_exc]
+    return alldata
+                  
 
 ############################################################################################
 
@@ -201,6 +212,24 @@ def bar_chart(dfs,x='region',y='Inclusive',size=(15,7)):
     dfs.plot(ax = ax, kind='bar')
     return fig
 
+def highlight_max(data, color='yellow'):
+    '''
+    highlight the maximum in a Series or DataFrame
+    '''
+    attr = 'background-color: {}'.format(color)
+    if data.ndim == 1:  # Series from .apply(axis=0) or axis=1
+        is_max = data == data.max()
+        return [attr if v else '' for v in is_max]
+    else:  # from .apply(axis=None)
+        is_max = data == data.max().max()
+        return pd.DataFrame(np.where(is_max, attr, ''),
+                            index=data.index, columns=data.columns)
+    
+def highlight(df, fmt="{:.2%}", ht=0.5, hcolor='yellow'):
+    return df.style.format(fmt).apply(lambda x: ["background: %s" % hcolor if v >= ht else "" for v in x], axis = 1)
+
+def highlight_higher(x):
+    return ["background: yellow" if v > 0.8 else "" for v in x]
 
 ############################################################################################
 
