@@ -111,7 +111,7 @@ def load_perf_data(application,experiment,nolibs=False):
     else:
         return metric_dict
 
-def get_pandas(path):
+def get_pandas(path, callpaths=False):
     '''
     returns a dictionary of pandas
         - keys are the metrics that each panda has data for
@@ -135,7 +135,12 @@ def get_pandas(path):
         prof_data.metadata = time_data.metadata
         metric = prof_data.metric
         metric_data[metric] = prof_data.summarize_samples()
+
         metric_data[metric].index.names = ['rank', 'context', 'thread', 'region']
+        if not callpaths:
+            #metric_data[metric]['Total'] = metric_data[metric][metric_data[metric].index.get_level_values('region').str.match('[SUMMARY] .TAU application')]
+            metric_data[metric] = metric_data[metric][~metric_data[metric].index.get_level_values('region').str.contains(".TAU application")]
+            
         metric_data['METADATA'] = prof_data.metadata
     return metric_data
 
