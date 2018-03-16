@@ -94,15 +94,21 @@ def get_pandas_non_summary():
     
     return metric_data
 
-def load_perf_data(application,experiment,nolibs=False):
+def load_perf_data(application,experiment,nolibs=False,scaling=False):
     '''
         Return a Pandas dictionary from data in the detault path
+        TODO filtering and scaling
     '''
     path = ".tau/" + application + "/" + experiment + "/"
     if not os.path.exists(path):
         sys.exit("Error: invalid data path: %s" % path)
-    metric_dict = get_pandas(path = ".tau/" + application + "/" + experiment + "/")
-    if nolibs:
+
+    if scaling:
+        metric_dict = get_pandas_scaling(path)
+    else:
+        metric_dict = get_pandas(path)
+    
+    if nolibs and not scaling:
         filtered_dict = {}
         for k,v in metric_dict.items():
             if k == 'METADATA': filtered_dict[k] = metric_dict[k]
