@@ -1,7 +1,8 @@
 '''
-Brian Gravelle
+Brian Gravelle, Boyana Norris
 
-useful stuff for processing mictest data in the python notebooks here
+Useful functions for processing mictest data in the python notebooks 
+This will evolve into a real library
 '''
 
 
@@ -117,7 +118,7 @@ def load_perf_data(application,experiment,nolibs=False,scaling=False):
     else:
         return metric_dict
 
-def get_pandas(path):
+def get_pandas(path, callpaths=False):
     '''
     returns a dictionary of pandas
         - keys are the metrics that each panda has data for
@@ -141,54 +142,20 @@ def get_pandas(path):
         prof_data.metadata = time_data.metadata
         metric = prof_data.metric
         metric_data[metric] = prof_data.summarize_samples()
+
         metric_data[metric].index.names = ['rank', 'context', 'thread', 'region']
+        if not callpaths:
+            #metric_data[metric]['Total'] = metric_data[metric][metric_data[metric].index.get_level_values('region').str.match('[SUMMARY] .TAU application')]
+            metric_data[metric] = metric_data[metric][~metric_data[metric].index.get_level_values('region').str.contains(".TAU application")]
+            
         metric_data['METADATA'] = prof_data.metadata
-    return metric_data
-
-
-def get_pandas_multi_run(path):
-    '''
-    returns a dictionary of pandas
-        - keys are the metrics that each panda has data for
-        - multiple runs are stored as lists in dict
-    params
-        - path is the path to 
-    vals are the pandas that have the data organized however they organzed it
-        - samples are turned into summaries
-        - tau cmdr must be installed and .tau with the relevant data must be in this dir
-    '''
-    if not os.path.exists(path):
-        sys.exit("Error: invalid data path: %s" % path)
-    metric_data = {}
-    
-    paths = [path+n+'/' for n in listdir(path) if (not isfile(join(path, n)))]
-    num_trials = len(paths)
-    #files = [f for f in listdir(path) if not isfile(join(p, f))]
-    for p in paths:
-        d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
-        prof_data = TauTrialProfileData.parse(p+'/'+d[0])
-        time_data = TauTrialProfileData.parse(p+'/MULTI__TIME')
-        prof_data.metadata = time_data.metadata
-        metric = prof_data.metric
-        data = prof_data.summarize_samples()
-        try:
-            metric_data[metric].append(data)
-        except:
-            metric_data[metric] = [data]
-        metric_data[metric][-1].index.names = ['rank', 'context', 'thread', 'region']
-
-
-        try:
-            metric_data['METADATA'].append(prof_data.metadata)
-        except:
-            metric_data['METADATA'] = [prof_data.metadata]
-         
     return metric_data
 
 def get_pandas_scaling(path):
     '''
-    returns a dictionary of pandas
-    keys are the metrics that each panda has data for
+    returns a dictionary of dictionaries of pandas
+    The first layer of keys is the number of threads
+    The second layer keys are the metrics that each panda has data for
     vals are the pandas that have the data organized however they organzed it
         - samples are turned into summaries
         - tau cmdr must be installed and .tau with the relevant data must be in this dir
@@ -198,24 +165,63 @@ def get_pandas_scaling(path):
     
     paths = [path+n+'/' for n in listdir(path) if (not isfile(join(path, n)))]
     num_trials = len(paths)
+    if num_trials <= 0:
+        print "ERROR reading trials"
     #files = [f for f in listdir(path) if not isfile(join(p, f))]
     for p in paths:
         d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
-        trial_dir = p+'/'+d[0]
+        try:
+            trial_dir = p+'/'+d[0]
+        except:
+            print p 
         prof_data = TauTrialProfileData.parse(trial_dir)
         metric = prof_data.metric
 
         prof_list = [f for f in listdir(trial_dir)]
-        num_treads = len(prof_list)
-        try:
-            metric_data[num_treads][metric] = prof_data.summarize_samples()
-            metric_data[num_treads][metric].index.names = ['rank', 'context', 'thread', 'region']
-        except:
-            metric_data[num_treads] = {}
-            metric_data[num_treads][metric] = prof_data.summarize_samples()
-            metric_data[num_treads][metric].index.names = ['rank', 'context', 'thread', 'region']
+        num_threads = len(prof_list)
+
+        if num_threads not in metric_data.keys():
+            metric_data[num_threads] = {}
+
+        if metric not in metric_data[num_threads].keys():
+            metric_data[num_threads][metric] = []
+
+        metric_data[num_threads][metric].append(prof_data.summarize_samples())
+        metric_data[num_threads][metric][-1].index.names = ['rank', 'context', 'thread', 'region']
+
+    # TODO average metric data
+    for kt in metric_data:
+        for km in metric_data[kt]:
+            ntrials = len(metric_data[kt][km])
+            temp = metric_data[kt][km][0].copy()
+            temp.index = temp.index.droplevel()
+            metric_sum = temp.unstack()
+            for i in range(1, ntrials):
+                temp = metric_data[kt][km][i].copy()
+                temp.index = temp.index.droplevel()
+                metric_sum = metric_sum + temp.unstack()
+            metric_data[kt][km] = (metric_sum / ntrials).stack()
 
     return metric_data
+
+def remove_erroneous_threads(metric_data, thread_list):
+    '''
+    some trial are intended to run with n threads but m != n threads are recorded
+    this function allows the user to easily remove trials that don't conform
+    
+    - metric_data is the dictionary output from get_pandas_scaling()
+    - thread_list is the list of thread counts requested
+        - any thread counts not in thread list will be excluded
+        - this may not be entirely accurate if an erroneous count is equal to a real count
+    - returns new dictionary
+    '''
+
+    filtered_data = {}
+    for k in metric_data:
+        if k in thread_list:
+            filtered_data[k] = metric_data[k]
+
+    return filtered_data
 
 
 def combine_metrics(metric_dict,inc_exc='Inclusive'):

@@ -154,8 +154,9 @@ def compute_correlations(metrics_dict, inc_exc='Inclusive',highlight_threshold=0
     # values greater than highlight_threshold.
     alldata = combine_metrics(metrics_dict,'Inclusive')
     correlations = alldata.corr()
-    correlations = correlations.style.format("{:.2%}").apply(
-           lambda x: ["background: yellow" if v > 0.5 else "" for v in x], axis = 1)
+    cm = sns.light_palette("yellow", as_cmap=True)
+    correlations = correlations.style.format("{:.2%}").background_gradient(cmap=cm)
+        #.apply(lambda x: ["background: yellow" if v > 0.5 else "" for v in x], axis = 1)
     return correlations
 
 def gen_metric(met_list, name):
