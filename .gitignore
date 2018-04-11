@@ -73,6 +73,7 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.invalid
+.DS_Store
 
 # pyenv
 .python-version
