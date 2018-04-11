@@ -123,7 +123,8 @@ def get_pandas(path, callpaths=False):
     returns a dictionary of pandas
         - keys are the metrics that each panda has data for
     params
-        - path is the path to 
+        - path is the path to the trials (should e directory filled with numbered dirs)
+        - 
     vals are the pandas that have the data organized however they organzed it
         - samples are turned into summaries
         - tau cmdr must be installed and .tau with the relevant data must be in this dir
@@ -151,7 +152,7 @@ def get_pandas(path, callpaths=False):
         metric_data['METADATA'] = prof_data.metadata
     return metric_data
 
-def get_pandas_scaling(path):
+def get_pandas_scaling(path, callpaths=False):
     '''
     returns a dictionary of dictionaries of pandas
     The first layer of keys is the number of threads
@@ -170,10 +171,14 @@ def get_pandas_scaling(path):
     #files = [f for f in listdir(path) if not isfile(join(p, f))]
     for p in paths:
         d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
+
         try:
             trial_dir = p+'/'+d[0]
         except:
-            print p 
+            pass
+            # print p # some trials don't have data use this to figure out which
+            # missing data caused by errors in experiment scripts or crashes
+
         prof_data = TauTrialProfileData.parse(trial_dir)
         metric = prof_data.metric
 
@@ -188,19 +193,29 @@ def get_pandas_scaling(path):
 
         metric_data[num_threads][metric].append(prof_data.summarize_samples())
         metric_data[num_threads][metric][-1].index.names = ['rank', 'context', 'thread', 'region']
+        if not callpaths:
+            metric_data[num_threads][metric][-1] = metric_data[num_threads][metric][-1][~metric_data[num_threads][metric][-1].index.get_level_values('region').str.contains(".TAU application")]
+
+        try:
+            time_data = TauTrialProfileData.parse(p+'/MULTI__TIME')
+            prof_data.metadata = time_data.metadata
+            metric_data[num_threads]['METADATA'] = prof_data.metadata
+        except:
+            print "Gosh darnit nthread = %d metric = %s" % (num_threads, metric)
 
     # TODO average metric data
     for kt in metric_data:
         for km in metric_data[kt]:
-            ntrials = len(metric_data[kt][km])
-            temp = metric_data[kt][km][0].copy()
-            temp.index = temp.index.droplevel()
-            metric_sum = temp.unstack()
-            for i in range(1, ntrials):
-                temp = metric_data[kt][km][i].copy()
+            if not (km == 'METADATA'):
+                ntrials = len(metric_data[kt][km])
+                temp = metric_data[kt][km][0].copy()
                 temp.index = temp.index.droplevel()
-                metric_sum = metric_sum + temp.unstack()
-            metric_data[kt][km] = (metric_sum / ntrials).stack()
+                metric_sum = temp.unstack()
+                for i in range(1, ntrials):
+                    temp = metric_data[kt][km][i].copy()
+                    temp.index = temp.index.droplevel()
+                    metric_sum = metric_sum + temp.unstack()
+                metric_data[kt][km] = (metric_sum / ntrials).stack()
 
     return metric_data
 
@@ -243,7 +258,6 @@ def combine_metrics(metric_dict,inc_exc='Inclusive'):
 
 ############################################################################################
 
-
 def print_metadata(data):
     
     for key in data['METADATA']:
@@ -282,6 +296,21 @@ def highlight(df, fmt="{:.2%}", ht=0.5, hcolor='yellow'):
 
 def highlight_higher(x):
     return ["background: yellow" if v > 0.8 else "" for v in x]
+
+def select_metric_from_scaling(scale_data, metric):
+    '''
+    returns a single level dictionary with just the requested metric
+    dictionary keys are the thread counts
+    '''
+    metric_data = {}
+    for kt in scale_data:
+        try:
+            metric_data[kt] = scale_data[kt][metric]
+        except:
+            print "ERROR getting %s for thread %d" % (metric, kt)
+
+
+
 
 ############################################################################################
 

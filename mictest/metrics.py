@@ -2,6 +2,15 @@
 functions to add derived metrics to the dictionaries of metrics
 
 please use the examples to add more
+
+Existing list of prewritten metrics:
+add_IPC(metrics)          - Instructions per Cycle
+add_CPI(metrics)          - Cycles per instruction
+add_VIPC(metrics)         - vector instructions per cycle
+add_VIPI(metrics)         - vector instructions per instruction (i.e. fraction of total)
+add_L1_missrate(metrics)  - miss rate for L1 cache
+
+
 '''
 
 
@@ -86,7 +95,7 @@ def add_VIPC(metrics):
 
 def add_VIPI(metrics):
     '''
-    add vector instructions per cycle to the metrics dictionary
+    add vector instructions per ins to the metrics dictionary
     returns true if successful
     '''
     INS = 'PAPI_TOT_INS'
@@ -136,6 +145,28 @@ def add_L1_missrate(metrics):
         
     return True
 
+def add_metric_to_scaling_data(data, metric_func):
+    '''
+    data is data with scaling information
+    metric_func is a function pointer to one of the metric functions in this file
+    '''
+    results = {}
+    for kthread in data:
+        results[kthread] = metric_func()
+
+    for kthread in results:
+        if not results[kthread]:
+            print "ERROR adding metric to thread count: " + str(kthread)
+
+
+############################################################################################
+
+#                                   Statistics and plotting
+
+############################################################################################
+
+
+
 def plot_metric(dfs, metric, function='', inc_exc='Inclusive', percent=False):
     # inc_exc is either Inclusive or Exclusive
     metricdf = dfs[metric]
@@ -158,6 +189,16 @@ def compute_correlations(metrics_dict, inc_exc='Inclusive',highlight_threshold=0
     correlations = correlations.style.format("{:.2%}").background_gradient(cmap=cm)
         #.apply(lambda x: ["background: yellow" if v > 0.5 else "" for v in x], axis = 1)
     return correlations
+
+
+
+
+
+############################################################################################
+
+#                                   functions for generating metrics
+
+############################################################################################
 
 def gen_metric(met_list, name):
     func = "def add_" + name + "(metrics):\n"
