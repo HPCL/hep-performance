@@ -164,18 +164,25 @@ def get_pandas_scaling(path, callpaths=False):
     
     metric_data = {}
     
+    # generate list of paths to read in
     paths = [path+n+'/' for n in listdir(path) if (not isfile(join(path, n)))]
     num_trials = len(paths)
     if num_trials <= 0:
         print "ERROR reading trials"
-    #files = [f for f in listdir(path) if not isfile(join(p, f))]
+
+    # gather data for path lists
+    # puts it in metric data
+    #    starts as dict (thread count) of dict (metrics) of list (individual trials)
     for p in paths:
         d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
 
         try:
             trial_dir = p+'/'+d[0]
         except:
-            pass
+            # if the dir is empty that trial ffailed for some reason so skip
+            # TODO make this more precise (the metric is just a guess based on the previous one)
+            print "Possible missing metric: \nnthread = %d \nmetric = %s" % (num_threads, metric)
+            continue
             # print p # some trials don't have data use this to figure out which
             # missing data caused by errors in experiment scripts or crashes
 
@@ -194,6 +201,7 @@ def get_pandas_scaling(path, callpaths=False):
         metric_data[num_threads][metric].append(prof_data.summarize_samples())
         metric_data[num_threads][metric][-1].index.names = ['rank', 'context', 'thread', 'region']
         if not callpaths:
+            # this line magically gets rid of the .TAU samples that otherwise unhelpfully dominate the data
             metric_data[num_threads][metric][-1] = metric_data[num_threads][metric][-1][~metric_data[num_threads][metric][-1].index.get_level_values('region').str.contains(".TAU application")]
 
         try:
@@ -201,9 +209,11 @@ def get_pandas_scaling(path, callpaths=False):
             prof_data.metadata = time_data.metadata
             metric_data[num_threads]['METADATA'] = prof_data.metadata
         except:
-            print "Gosh darnit nthread = %d metric = %s" % (num_threads, metric)
+            # TODO make this more precise (the metric is just a guess based on the previous one)
+            print "Possible missing metric: \nnthread = %d \nmetric = %s" % (num_threads, metric)
 
-    # TODO average metric data
+    # average metric data
+    #   turns dict of dict of list into dict of dict of panda (average of listed trials)
     for kt in metric_data:
         for km in metric_data[kt]:
             if not (km == 'METADATA'):
@@ -264,11 +274,15 @@ def print_metadata(data):
         print('{:50} {}'.format(key,data['METADATA'][key] ))
 
 
-def print_available_metrics(data):
-    
-    for key in data:
-        if not key == 'METADATA':
-            print(key)
+def print_available_metrics(data, scaling=False):
+    if not scaling:
+        for key in data:
+            if not key == 'METADATA':
+                print(key)
+    else:
+        for key in data[data.keys()[0]]:
+            if not key == 'METADATA':
+                print(key)
 
 def set_chart_font_size(fntsize):
     font = {'size'   : fntsize}; matplotlib.rc('font', **font)
@@ -309,6 +323,18 @@ def select_metric_from_scaling(scale_data, metric):
         except:
             print "ERROR getting %s for thread %d" % (metric, kt)
 
+    return metric_data
+
+def scaling_plot(data, inclusive=True):
+    '''
+    data is a single metric scaling dictionary
+    '''
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+    temp = dfs.groupby(['thread','region'])[which].sum().reset_index().groupby(['thread']).var()
+    if plot: bar_chart(temp)
+    if sort: return temp.sort_values(by=which,ascending=False)
+    else: return temp
 
 
 
@@ -360,7 +386,6 @@ def thread_variance(dfs, inclusive=True, sort=True, plot=False):
     temp = dfs.groupby(['thread','region'])[which].sum().reset_index().groupby(['thread']).var()
     if plot: bar_chart(temp)
     if sort: return temp.sort_values(by=which,ascending=False)
-    else: return temp
 
 def hotspots(dfs, n, flag):
     if flag == 0:

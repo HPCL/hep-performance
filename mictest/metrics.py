@@ -152,7 +152,7 @@ def add_metric_to_scaling_data(data, metric_func):
     '''
     results = {}
     for kthread in data:
-        results[kthread] = metric_func()
+        results[kthread] = metric_func(data[kthread])
 
     for kthread in results:
         if not results[kthread]:
