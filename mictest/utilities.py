@@ -325,18 +325,38 @@ def select_metric_from_scaling(scale_data, metric):
 
     return metric_data
 
-def scaling_plot(data, inclusive=True):
+def scaling_plot(data, inclusive=True, sort=True, plot=False):
     '''
     data is a single metric scaling dictionary
     '''
     if inclusive: which='Inclusive'
     else: which='Exclusive'
-    temp = dfs.groupby(['thread','region'])[which].sum().reset_index().groupby(['thread']).var()
+    temp = data.groupby(['thread','region'])[which].sum().reset_index().groupby(['thread']).sum()
     if plot: bar_chart(temp)
     if sort: return temp.sort_values(by=which,ascending=False)
     else: return temp
 
 
+def get_thread_level_metric_scaling(data, inclusive=True):
+    '''
+    data is a single metric scaling dictionary
+    returns a dictionary of panda series 
+    '''
+    metric_data = {}
+    for kt in data:
+        metric_data[kt] = get_thread_level_metric(data[kt],inclusive=inclusive)
+    return metric_data
+
+def get_thread_level_metric(data, inclusive=True):
+    '''
+    data is a panda dataframe of one metric and one thread
+    returns a panda series of the metric summed over each thread
+    note: for certain derived metrics (i.e. ratios) this won't work because it sums
+    '''
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+    metric_list = data.groupby(['thread'])[which].sum()
+    return metric_list
 
 ############################################################################################
 

@@ -145,6 +145,60 @@ def add_L1_missrate(metrics):
         
     return True
 
+
+def add_L2_missrate(metrics):
+    '''
+    add Instructions per cycle to the metrics dictionary
+    returns true if successful
+    '''
+    L2A = 'PAPI_L2_TCA' # total load store
+    L2M = 'PAPI_L2_TCM'  # L1 misses
+    
+    if(not (metrics.has_key(L2A) and metrics.has_key(L2M)) ):
+        print "ERROR adding L2 MR to metric dictionary"
+        return False
+        
+    access = metrics[L2A].copy()
+    misses = metrics[L2M].copy()
+    access.index = access.index.droplevel()
+    misses.index = misses.index.droplevel()    
+        
+    
+    uaccess = access.unstack()
+    umisses = misses.unstack()
+
+    metrics['DERIVED_L2_MISSRATE'] = (umisses / uaccess).stack()
+        
+        
+    return True
+
+
+def add_L3_missrate(metrics):
+    '''
+    add Instructions per cycle to the metrics dictionary
+    returns true if successful
+    '''
+    L3A = 'PAPI_L3_TCA' # total load store
+    L3M = 'PAPI_L3_TCM'  # L1 misses
+    
+    if(not (metrics.has_key(L3A) and metrics.has_key(L3M)) ):
+        print "ERROR adding L3 MR to metric dictionary"
+        return False
+        
+    access = metrics[L3A].copy()
+    misses = metrics[L3M].copy()
+    access.index = access.index.droplevel()
+    misses.index = misses.index.droplevel()    
+        
+    
+    uaccess = access.unstack()
+    umisses = misses.unstack()
+
+    metrics['DERIVED_L3_MISSRATE'] = (umisses / uaccess).stack()
+        
+        
+    return True
+
 def add_metric_to_scaling_data(data, metric_func):
     '''
     data is data with scaling information
