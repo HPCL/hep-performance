@@ -326,7 +326,7 @@ def select_metric_from_scaling(scale_data, metric):
 
     return metric_data
 
-def scaling_plot(data, inclusive=True, plot=True, function="\[SUMMARY\] .TAU application$", metric='PAPI_TOT_CYC'):
+def scaling_plot(data, inclusive=True, plot=True, function="\[SUMMARY\] .TAU application$", metric='PAPI_TOT_CYC', max=False):
     '''
     data is the whole scaling data
     function is what to search in the call-path please use regular functions
@@ -340,7 +340,10 @@ def scaling_plot(data, inclusive=True, plot=True, function="\[SUMMARY\] .TAU app
 
     metric_data = select_metric_from_scaling(data, metric)
     thread_list  = sorted(metric_data.keys())
-    data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.match(function)][which].sum()/kt for kt in thread_list]
+    if max:
+        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.match(function)][which].max() for kt in thread_list]
+    else:
+        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.match(function)][which].sum()/kt for kt in thread_list]
     
     if plot: plt = matplotlib.pyplot.plot(thread_list, data_list)
 
