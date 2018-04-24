@@ -316,6 +316,7 @@ def select_metric_from_scaling(scale_data, metric):
     returns a single level dictionary with just the requested metric
     dictionary keys are the thread counts
     '''
+
     metric_data = {}
     for kt in scale_data:
         try:
@@ -325,7 +326,7 @@ def select_metric_from_scaling(scale_data, metric):
 
     return metric_data
 
-def scaling_plot(data, inclusive=True, function="\[SUMMARY\] .TAU application$", metric='PAPI_TOT_CYC'):
+def scaling_plot(data, inclusive=True, plot=True, function="\[SUMMARY\] .TAU application$", metric='PAPI_TOT_CYC'):
     '''
     data is the whole scaling data
     function is what to search in the call-path please use regular functions
@@ -340,16 +341,23 @@ def scaling_plot(data, inclusive=True, function="\[SUMMARY\] .TAU application$",
     metric_data = select_metric_from_scaling(data, metric)
     thread_list  = sorted(metric_data.keys())
     data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.match(function)][which].sum()/kt for kt in thread_list]
-    plt = matplotlib.pyplot.plot(thread_list, data_list)
+    
+    if plot: plt = matplotlib.pyplot.plot(thread_list, data_list)
 
     return thread_list, data_list
 
 
-def get_thread_level_metric_scaling(data, inclusive=True):
+def get_thread_level_metric_scaling(_data, inclusive=True, metric='NONE'):
     '''
     data is a single metric scaling dictionary
     returns a dictionary of panda series 
     '''
+
+    if metric=='NONE':
+        data = _data
+    else:
+        data = select_metric_from_scaling(_data, metric) 
+
     metric_data = {}
     for kt in data:
         metric_data[kt] = get_thread_level_metric(data[kt],inclusive=inclusive)
