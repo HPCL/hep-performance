@@ -325,16 +325,24 @@ def select_metric_from_scaling(scale_data, metric):
 
     return metric_data
 
-def scaling_plot(data, inclusive=True, sort=True, plot=False):
+def scaling_plot(data, inclusive=True, function="\[SUMMARY\] .TAU application$", metric='PAPI_TOT_CYC'):
     '''
-    data is a single metric scaling dictionary
+    data is the whole scaling data
+    function is what to search in the call-path please use regular functions
+        default looks at the whole application
+    metric is the metric to plot
+
+    returns lists of threads and metrics per thread (i.e. data to plot)
     '''
     if inclusive: which='Inclusive'
     else: which='Exclusive'
-    temp = data.groupby(['thread','region'])[which].sum().reset_index().groupby(['thread']).sum()
-    if plot: bar_chart(temp)
-    if sort: return temp.sort_values(by=which,ascending=False)
-    else: return temp
+
+    metric_data = select_metric_from_scaling(data, metric)
+    thread_list  = sorted(metric_data.keys())
+    data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.match(function)][which].sum()/kt for kt in thread_list]
+    plt = matplotlib.pyplot.plot(thread_list, data_list)
+
+    return thread_list, data_list
 
 
 def get_thread_level_metric_scaling(data, inclusive=True):
