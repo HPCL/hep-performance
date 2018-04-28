@@ -119,12 +119,17 @@ def add_VIPI(metrics):
     return True
 
 
-def add_L1_missrate(metrics):
+def add_L1_missrate(metrics, lst=True):
     '''
     add Instructions per cycle to the metrics dictionary
+    lst is if it should use lst ins instead of L1
     returns true if successful
     '''
-    LST = 'PAPI_LST_INS' # total load store
+    if lst:
+        LST = 'PAPI_LST_INS' # total load store
+    else:
+        LST = 'PAPI_L1_TCA' # total load store
+        
     L1M = 'PAPI_L1_TCM'  # L1 misses
     
     if(not (metrics.has_key(LST) and metrics.has_key(L1M)) ):
@@ -144,7 +149,6 @@ def add_L1_missrate(metrics):
         
         
     return True
-
 
 def add_L2_missrate(metrics):
     '''
@@ -173,13 +177,18 @@ def add_L2_missrate(metrics):
     return True
 
 
-def add_L3_missrate(metrics):
+def add_L3_missrate(metrics, llc=False):
     '''
     add Instructions per cycle to the metrics dictionary
     returns true if successful
     '''
-    L3A = 'PAPI_L3_TCA' # total load store
-    L3M = 'PAPI_L3_TCM'  # L1 misses
+
+    if llc:
+        L3A = 'PAPI_LLC_REFERENCES' # total load store
+        L3M = 'PAPI_LLC_MISSES'  # L1 misses
+    else:
+        L3A = 'PAPI_L3_TCA' # total load store
+        L3M = 'PAPI_L3_TCM'  # L1 misses
     
     if(not (metrics.has_key(L3A) and metrics.has_key(L3M)) ):
         print "ERROR adding L3 MR to metric dictionary"
