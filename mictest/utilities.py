@@ -186,7 +186,11 @@ def get_pandas_scaling(path, callpaths=False):
             # print p # some trials don't have data use this to figure out which
             # missing data caused by errors in experiment scripts or crashes
 
-        prof_data = TauTrialProfileData.parse(trial_dir)
+        try:
+            prof_data = TauTrialProfileData.parse(trial_dir)
+        except:
+            print "Parsing ERROR: \ndir = %s" % (trial_dir)
+            continue 
         metric = prof_data.metric
 
         prof_list = [f for f in listdir(trial_dir)]
@@ -341,13 +345,23 @@ def scaling_plot(data, inclusive=True, plot=True, function="\[SUMMARY\] .TAU app
     metric_data = select_metric_from_scaling(data, metric)
     thread_list  = sorted(metric_data.keys())
     if max:
-        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.match(function)][which].max() for kt in thread_list]
+        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.contains(function)][which].max() for kt in thread_list]
     else:
-        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.match(function)][which].sum()/kt for kt in thread_list]
+        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.contains(function)][which].sum()/kt for kt in thread_list]
     
     if plot: plt = matplotlib.pyplot.plot(thread_list, data_list)
 
     return thread_list, data_list
+
+
+def thread_bar_plots(data_dict, t_list, y=-1):
+    for kt in t_list:
+        print "Thread Count: %d" % kt
+        data = list(data_dict[kt])
+        matplotlib.pyplot.bar(range(len(data)), data)
+        if y != -1:
+            matplotlib.pyplot.ylim(ymax=y)
+        matplotlib.pyplot.show()
 
 
 def get_thread_level_metric_scaling(_data, inclusive=True, metric='NONE'):

@@ -184,8 +184,8 @@ def add_L3_missrate(metrics, llc=False):
     '''
 
     if llc:
-        L3A = 'PAPI_LLC_REFERENCES' # total load store
-        L3M = 'PAPI_LLC_MISSES'  # L1 misses
+        L3A = 'PAPI_NATIVE_LLC_REFERENCES' # total load store
+        L3M = 'PAPI_NATIVE_LLC_MISSES'  # L1 misses
     else:
         L3A = 'PAPI_L3_TCA' # total load store
         L3M = 'PAPI_L3_TCM'  # L1 misses
@@ -208,14 +208,17 @@ def add_L3_missrate(metrics, llc=False):
         
     return True
 
-def add_metric_to_scaling_data(data, metric_func):
+def add_metric_to_scaling_data(data, metric_func, other=None):
     '''
     data is data with scaling information
     metric_func is a function pointer to one of the metric functions in this file
     '''
     results = {}
     for kthread in data:
-        results[kthread] = metric_func(data[kthread])
+        if other is None:
+            results[kthread] = metric_func(data[kthread])
+        else:
+            results[kthread] = metric_func(data[kthread], other)
 
     for kthread in results:
         if not results[kthread]:
