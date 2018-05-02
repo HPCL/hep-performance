@@ -170,6 +170,11 @@ def get_pandas_scaling(path, callpaths=False):
     if num_trials <= 0:
         print "ERROR reading trials"
 
+    num_threads = -1
+    metric = 'NA'
+    trial_cnt = 0
+    error_cnt = 0
+
     # gather data for path lists
     # puts it in metric data
     #    starts as dict (thread count) of dict (metrics) of list (individual trials)
@@ -177,11 +182,14 @@ def get_pandas_scaling(path, callpaths=False):
         d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
 
         try:
+            trial_cnt +=1
             trial_dir = p+'/'+d[0]
         except:
             # if the dir is empty that trial ffailed for some reason so skip
             # TODO make this more precise (the metric is just a guess based on the previous one)
-            print "Possible missing metric: \nnthread = %d \nmetric = %s" % (num_threads, metric)
+            # print "Possible missing metric: \nnthread = %d \nmetric  = %s \ndir     = %s\n" % (num_threads, metric, p)
+            # print "Possible missing metric: \nnthread = %d \nmetric  = %s\n" % (num_threads, metric)
+            error_cnt +=1
             continue
             # print p # some trials don't have data use this to figure out which
             # missing data caused by errors in experiment scripts or crashes
@@ -191,6 +199,8 @@ def get_pandas_scaling(path, callpaths=False):
         except:
             print "Parsing ERROR: \ndir = %s" % (trial_dir)
             continue 
+
+
         metric = prof_data.metric
 
         prof_list = [f for f in listdir(trial_dir)]
@@ -215,6 +225,9 @@ def get_pandas_scaling(path, callpaths=False):
         except:
             # TODO make this more precise (the metric is just a guess based on the previous one)
             print "Possible missing metric: \nnthread = %d \nmetric = %s" % (num_threads, metric)
+
+    print "Found: %d trials with %d errors\n\n" % (trial_cnt, error_cnt)
+
 
     # average metric data
     #   turns dict of dict of list into dict of dict of panda (average of listed trials)
@@ -347,7 +360,8 @@ def scaling_plot(data, inclusive=True, plot=True, function="\[SUMMARY\] .TAU app
     if max:
         data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.contains(function)][which].max() for kt in thread_list]
     else:
-        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.contains(function)][which].sum()/kt for kt in thread_list]
+        # cause TAU has 2 of everything average is half
+        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.contains(function)][which].sum()/(2*kt) for kt in thread_list]
     
     if plot: plt = matplotlib.pyplot.plot(thread_list, data_list)
 
@@ -382,13 +396,37 @@ def get_thread_level_metric_scaling(_data, inclusive=True, metric='NONE'):
 
 def get_thread_level_metric(data, inclusive=True):
     '''
-    data is a panda dataframe of one metric and one thread
+    data is a panda dataframe of one metric and one thread count
     returns a panda series of the metric summed over each thread
     note: for certain derived metrics (i.e. ratios) this won't work because it sums
     '''
     if inclusive: which='Inclusive'
     else: which='Exclusive'
     metric_list = data.groupby(['thread'])[which].sum()
+    return metric_list
+
+
+def get_func_level_metric(data, inclusive=False, avg=True, func = 'NULL'):
+    '''
+    data is a panda dataframe of one metric and one thread count
+    returns a panda series of the metric averaged or summed over each thread
+    note: for certain derived metrics (i.e. ratios) this won't work because it sums
+    
+    TODO add filtering option data[n_thr] = filter_libs_out(data[n_thr])
+    '''
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+        
+    group_data = data.groupby(['region'])[[which]]
+
+    if avg:
+        metric_list = group_data.mean().sort_values(by=which,ascending=False)[[which]]
+    else:
+        metric_list = group_data.sum().sort_values(by=which,ascending=False)[[which]]
+
+    if not func == 'NULL':
+        metric_list = metric_list[metric_list.index.get_level_values('region').str.contains(func)][[which]]
+
     return metric_list
 
 ############################################################################################
