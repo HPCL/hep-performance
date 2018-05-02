@@ -123,7 +123,8 @@ def get_pandas(path, callpaths=False):
     returns a dictionary of pandas
         - keys are the metrics that each panda has data for
     params
-        - path is the path to 
+        - path is the path to the trials (should e directory filled with numbered dirs)
+        - 
     vals are the pandas that have the data organized however they organzed it
         - samples are turned into summaries
         - tau cmdr must be installed and .tau with the relevant data must be in this dir
@@ -151,7 +152,7 @@ def get_pandas(path, callpaths=False):
         metric_data['METADATA'] = prof_data.metadata
     return metric_data
 
-def get_pandas_scaling(path):
+def get_pandas_scaling(path, callpaths=False):
     '''
     returns a dictionary of dictionaries of pandas
     The first layer of keys is the number of threads
@@ -163,18 +164,43 @@ def get_pandas_scaling(path):
     
     metric_data = {}
     
+    # generate list of paths to read in
     paths = [path+n+'/' for n in listdir(path) if (not isfile(join(path, n)))]
     num_trials = len(paths)
     if num_trials <= 0:
         print("ERROR reading trials")
-    #files = [f for f in listdir(path) if not isfile(join(p, f))]
+
+    num_threads = -1
+    metric = 'NA'
+    trial_cnt = 0
+    error_cnt = 0
+
+    # gather data for path lists
+    # puts it in metric data
+    #    starts as dict (thread count) of dict (metrics) of list (individual trials)
     for p in paths:
         d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
+
         try:
+            trial_cnt +=1
             trial_dir = p+'/'+d[0]
         except:
-            print( p )
-        prof_data = TauTrialProfileData.parse(trial_dir)
+            # if the dir is empty that trial ffailed for some reason so skip
+            # TODO make this more precise (the metric is just a guess based on the previous one)
+            # print "Possible missing metric: \nnthread = %d \nmetric  = %s \ndir     = %s\n" % (num_threads, metric, p)
+            # print ("Possible missing metric: \nnthread = %d \nmetric  = %s\n" % (num_threads, metric))
+            error_cnt +=1
+            continue
+            # print( p ) # some trials don't have data use this to figure out which
+            # missing data caused by errors in experiment scripts or crashes
+
+        try:
+            prof_data = TauTrialProfileData.parse(trial_dir)
+        except:
+            print ( "Parsing ERROR: \ndir = %s" % (trial_dir))
+            continue 
+
+
         metric = prof_data.metric
 
         prof_list = [f for f in listdir(trial_dir)]
@@ -188,19 +214,35 @@ def get_pandas_scaling(path):
 
         metric_data[num_threads][metric].append(prof_data.summarize_samples())
         metric_data[num_threads][metric][-1].index.names = ['rank', 'context', 'thread', 'region']
+        if not callpaths:
+            # this line magically gets rid of the .TAU samples that otherwise unhelpfully dominate the data
+            metric_data[num_threads][metric][-1] = metric_data[num_threads][metric][-1][~metric_data[num_threads][metric][-1].index.get_level_values('region').str.contains(".TAU application")]
 
-    # TODO average metric data
+        try:
+            time_data = TauTrialProfileData.parse(p+'/MULTI__TIME')
+            prof_data.metadata = time_data.metadata
+            metric_data[num_threads]['METADATA'] = prof_data.metadata
+        except:
+            # TODO make this more precise (the metric is just a guess based on the previous one)
+            print ( "Possible missing metric: \nnthread = %d \nmetric = %s" % (num_threads, metric))
+
+    print( "Found: %d trials with %d errors\n\n" % (trial_cnt, error_cnt))
+
+
+    # average metric data
+    #   turns dict of dict of list into dict of dict of panda (average of listed trials)
     for kt in metric_data:
         for km in metric_data[kt]:
-            ntrials = len(metric_data[kt][km])
-            temp = metric_data[kt][km][0].copy()
-            temp.index = temp.index.droplevel()
-            metric_sum = temp.unstack()
-            for i in range(1, ntrials):
-                temp = metric_data[kt][km][i].copy()
+            if not (km == 'METADATA'):
+                ntrials = len(metric_data[kt][km])
+                temp = metric_data[kt][km][0].copy()
                 temp.index = temp.index.droplevel()
-                metric_sum = metric_sum + temp.unstack()
-            metric_data[kt][km] = (metric_sum / ntrials).stack()
+                metric_sum = temp.unstack()
+                for i in range(1, ntrials):
+                    temp = metric_data[kt][km][i].copy()
+                    temp.index = temp.index.droplevel()
+                    metric_sum = metric_sum + temp.unstack()
+                metric_data[kt][km] = (metric_sum / ntrials).stack()
 
     return metric_data
 
@@ -243,18 +285,21 @@ def combine_metrics(metric_dict,inc_exc='Inclusive'):
 
 ############################################################################################
 
-
 def print_metadata(data):
     
     for key in data['METADATA']:
         print('{:50} {}'.format(key,data['METADATA'][key] ))
 
 
-def print_available_metrics(data):
-    
-    for key in data:
-        if not key == 'METADATA':
-            print(key)
+def print_available_metrics(data, scaling=False):
+    if not scaling:
+        for key in data:
+            if not key == 'METADATA':
+                print(key)
+    else:
+        for key in data[data.keys()[0]]:
+            if not key == 'METADATA':
+                print(key)
 
 def set_chart_font_size(fntsize):
     font = {'size'   : fntsize}; matplotlib.rc('font', **font)
@@ -282,6 +327,107 @@ def highlight(df, fmt="{:.2%}", ht=0.5, hcolor='yellow'):
 
 def highlight_higher(x):
     return ["background: yellow" if v > 0.8 else "" for v in x]
+
+def select_metric_from_scaling(scale_data, metric):
+    '''
+    returns a single level dictionary with just the requested metric
+    dictionary keys are the thread counts
+    '''
+
+    metric_data = {}
+    for kt in scale_data:
+        try:
+            metric_data[kt] = scale_data[kt][metric]
+        except:
+            print ("ERROR getting %s for thread %d" % (metric, kt))
+
+    return metric_data
+
+def scaling_plot(data, inclusive=True, plot=True, function="\[SUMMARY\] .TAU application$", metric='PAPI_TOT_CYC', max=False):
+    '''
+    data is the whole scaling data
+    function is what to search in the call-path please use regular functions
+        default looks at the whole application
+    metric is the metric to plot
+
+    returns lists of threads and metrics per thread (i.e. data to plot)
+    '''
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+
+    metric_data = select_metric_from_scaling(data, metric)
+    thread_list  = sorted(metric_data.keys())
+    if max:
+        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.contains(function)][which].max() for kt in thread_list]
+    else:
+        # cause TAU has 2 of everything average is half
+        data_list = [metric_data[kt][metric_data[kt].index.get_level_values('region').str.contains(function)][which].sum()/(2*kt) for kt in thread_list]
+    
+    if plot: plt = matplotlib.pyplot.plot(thread_list, data_list)
+
+    return thread_list, data_list
+
+
+def thread_bar_plots(data_dict, t_list, y=-1):
+    for kt in t_list:
+        print ("Thread Count: %d" % kt)
+        data = list(data_dict[kt])
+        matplotlib.pyplot.bar(range(len(data)), data)
+        if y != -1:
+            matplotlib.pyplot.ylim(ymax=y)
+        matplotlib.pyplot.show()
+
+
+def get_thread_level_metric_scaling(_data, inclusive=True, metric='NONE'):
+    '''
+    data is a single metric scaling dictionary
+    returns a dictionary of panda series 
+    '''
+
+    if metric=='NONE':
+        data = _data
+    else:
+        data = select_metric_from_scaling(_data, metric) 
+
+    metric_data = {}
+    for kt in data:
+        metric_data[kt] = get_thread_level_metric(data[kt],inclusive=inclusive)
+    return metric_data
+
+def get_thread_level_metric(data, inclusive=True):
+    '''
+    data is a panda dataframe of one metric and one thread count
+    returns a panda series of the metric summed over each thread
+    note: for certain derived metrics (i.e. ratios) this won't work because it sums
+    '''
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+    metric_list = data.groupby(['thread'])[which].sum()
+    return metric_list
+
+
+def get_func_level_metric(data, inclusive=False, avg=True, func = 'NULL'):
+    '''
+    data is a panda dataframe of one metric and one thread count
+    returns a panda series of the metric averaged or summed over each thread
+    note: for certain derived metrics (i.e. ratios) this won't work because it sums
+    
+    TODO add filtering option data[n_thr] = filter_libs_out(data[n_thr])
+    '''
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+        
+    group_data = data.groupby(['region'])[[which]]
+
+    if avg:
+        metric_list = group_data.mean().sort_values(by=which,ascending=False)[[which]]
+    else:
+        metric_list = group_data.sum().sort_values(by=which,ascending=False)[[which]]
+
+    if not func == 'NULL':
+        metric_list = metric_list[metric_list.index.get_level_values('region').str.contains(func)][[which]]
+
+    return metric_list
 
 ############################################################################################
 
@@ -331,7 +477,6 @@ def thread_variance(dfs, inclusive=True, sort=True, plot=False):
     temp = dfs.groupby(['thread','region'])[which].sum().reset_index().groupby(['thread']).var()
     if plot: bar_chart(temp)
     if sort: return temp.sort_values(by=which,ascending=False)
-    else: return temp
 
 def hotspots(dfs, n, flag):
     if flag == 0:

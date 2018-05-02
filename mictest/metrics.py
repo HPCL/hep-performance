@@ -2,6 +2,15 @@
 functions to add derived metrics to the dictionaries of metrics
 
 please use the examples to add more
+
+Existing list of prewritten metrics:
+add_IPC(metrics)          - Instructions per Cycle
+add_CPI(metrics)          - Cycles per instruction
+add_VIPC(metrics)         - vector instructions per cycle
+add_VIPI(metrics)         - vector instructions per instruction (i.e. fraction of total)
+add_L1_missrate(metrics)  - miss rate for L1 cache
+
+
 '''
 
 
@@ -86,7 +95,7 @@ def add_VIPC(metrics):
 
 def add_VIPI(metrics):
     '''
-    add vector instructions per cycle to the metrics dictionary
+    add vector instructions per ins to the metrics dictionary
     returns true if successful
     '''
     INS = 'PAPI_TOT_INS'
@@ -110,12 +119,17 @@ def add_VIPI(metrics):
     return True
 
 
-def add_L1_missrate(metrics):
+def add_L1_missrate(metrics, lst=True):
     '''
     add Instructions per cycle to the metrics dictionary
+    lst is if it should use lst ins instead of L1
     returns true if successful
     '''
-    LST = 'PAPI_LST_INS' # total load store
+    if lst:
+        LST = 'PAPI_LST_INS' # total load store
+    else:
+        LST = 'PAPI_L1_TCA' # total load store
+        
     L1M = 'PAPI_L1_TCM'  # L1 misses
     
     if(not (metrics.has_key(LST) and metrics.has_key(L1M)) ):
@@ -135,6 +149,89 @@ def add_L1_missrate(metrics):
         
         
     return True
+
+def add_L2_missrate(metrics):
+    '''
+    add Instructions per cycle to the metrics dictionary
+    returns true if successful
+    '''
+    L2A = 'PAPI_L2_TCA' # total load store
+    L2M = 'PAPI_L2_TCM'  # L1 misses
+    
+    if(not (metrics.has_key(L2A) and metrics.has_key(L2M)) ):
+        print "ERROR adding L2 MR to metric dictionary"
+        return False
+        
+    access = metrics[L2A].copy()
+    misses = metrics[L2M].copy()
+    access.index = access.index.droplevel()
+    misses.index = misses.index.droplevel()    
+        
+    
+    uaccess = access.unstack()
+    umisses = misses.unstack()
+
+    metrics['DERIVED_L2_MISSRATE'] = (umisses / uaccess).stack()
+        
+        
+    return True
+
+
+def add_L3_missrate(metrics, llc=False):
+    '''
+    add Instructions per cycle to the metrics dictionary
+    returns true if successful
+    '''
+
+    if llc:
+        L3A = 'PAPI_NATIVE_LLC_REFERENCES' # total load store
+        L3M = 'PAPI_NATIVE_LLC_MISSES'  # L1 misses
+    else:
+        L3A = 'PAPI_L3_TCA' # total load store
+        L3M = 'PAPI_L3_TCM'  # L1 misses
+    
+    if(not (metrics.has_key(L3A) and metrics.has_key(L3M)) ):
+        print "ERROR adding L3 MR to metric dictionary"
+        return False
+        
+    access = metrics[L3A].copy()
+    misses = metrics[L3M].copy()
+    access.index = access.index.droplevel()
+    misses.index = misses.index.droplevel()    
+        
+    
+    uaccess = access.unstack()
+    umisses = misses.unstack()
+
+    metrics['DERIVED_L3_MISSRATE'] = (umisses / uaccess).stack()
+        
+        
+    return True
+
+def add_metric_to_scaling_data(data, metric_func, other=None):
+    '''
+    data is data with scaling information
+    metric_func is a function pointer to one of the metric functions in this file
+    '''
+    results = {}
+    for kthread in data:
+        if other is None:
+            results[kthread] = metric_func(data[kthread])
+        else:
+            results[kthread] = metric_func(data[kthread], other)
+
+    for kthread in results:
+        if not results[kthread]:
+            print "ERROR adding metric to thread count: " + str(kthread)
+
+
+############################################################################################
+
+#                                   Statistics and plotting
+
+############################################################################################
+
+
 
 def plot_metric(dfs, metric, function='', inc_exc='Inclusive', percent=False):
     # inc_exc is either Inclusive or Exclusive
@@ -158,6 +255,16 @@ def compute_correlations(metrics_dict, inc_exc='Inclusive',highlight_threshold=0
     correlations = correlations.style.format("{:.2%}").background_gradient(cmap=cm)
         #.apply(lambda x: ["background: yellow" if v > 0.5 else "" for v in x], axis = 1)
     return correlations
+
+
+
+
+
+############################################################################################
+
+#                                   functions for generating metrics
+
+############################################################################################
 
 def gen_metric(met_list, name):
     func = "def add_" + name + "(metrics):\n"
