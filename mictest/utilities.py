@@ -166,14 +166,14 @@ def get_pandas_scaling(path):
     paths = [path+n+'/' for n in listdir(path) if (not isfile(join(path, n)))]
     num_trials = len(paths)
     if num_trials <= 0:
-        print "ERROR reading trials"
+        print("ERROR reading trials")
     #files = [f for f in listdir(path) if not isfile(join(p, f))]
     for p in paths:
         d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
         try:
             trial_dir = p+'/'+d[0]
         except:
-            print p 
+            print( p )
         prof_data = TauTrialProfileData.parse(trial_dir)
         metric = prof_data.metric
 
