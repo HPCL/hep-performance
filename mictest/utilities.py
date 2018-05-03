@@ -47,6 +47,7 @@ import collections
 import seaborn as sns
 # for fancy tables
 from IPython.core.display import display, HTML, display_html
+import copy
 
 
 
@@ -270,6 +271,8 @@ def combine_metrics(metric_dict,inc_exc='Inclusive'):
     if inc_exc == 'Inclusive': todrop = 'Exclusive'
     else: todrop = 'Inclusive'
     
+    metric_dict = copy.deepcopy(metric_dict)
+    #TODO actually make this happen reading data in
     for m in metric_dict:
         if (not m == 'METADATA') and ('DERIVED' not in m):
             metric_dict[m].index = metric_dict[m].index.droplevel()
