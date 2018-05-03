@@ -168,7 +168,7 @@ def get_pandas_scaling(path, callpaths=False):
     paths = [path+n+'/' for n in listdir(path) if (not isfile(join(path, n)))]
     num_trials = len(paths)
     if num_trials <= 0:
-        print "ERROR reading trials"
+        print("ERROR reading trials")
 
     num_threads = -1
     metric = 'NA'
@@ -188,16 +188,16 @@ def get_pandas_scaling(path, callpaths=False):
             # if the dir is empty that trial ffailed for some reason so skip
             # TODO make this more precise (the metric is just a guess based on the previous one)
             # print "Possible missing metric: \nnthread = %d \nmetric  = %s \ndir     = %s\n" % (num_threads, metric, p)
-            # print "Possible missing metric: \nnthread = %d \nmetric  = %s\n" % (num_threads, metric)
+            # print ("Possible missing metric: \nnthread = %d \nmetric  = %s\n" % (num_threads, metric))
             error_cnt +=1
             continue
-            # print p # some trials don't have data use this to figure out which
+            # print( p ) # some trials don't have data use this to figure out which
             # missing data caused by errors in experiment scripts or crashes
 
         try:
             prof_data = TauTrialProfileData.parse(trial_dir)
         except:
-            print "Parsing ERROR: \ndir = %s" % (trial_dir)
+            print ( "Parsing ERROR: \ndir = %s" % (trial_dir))
             continue 
 
 
@@ -224,9 +224,9 @@ def get_pandas_scaling(path, callpaths=False):
             metric_data[num_threads]['METADATA'] = prof_data.metadata
         except:
             # TODO make this more precise (the metric is just a guess based on the previous one)
-            print "Possible missing metric: \nnthread = %d \nmetric = %s" % (num_threads, metric)
+            print ( "Possible missing metric: \nnthread = %d \nmetric = %s" % (num_threads, metric))
 
-    print "Found: %d trials with %d errors\n\n" % (trial_cnt, error_cnt)
+    print( "Found: %d trials with %d errors\n\n" % (trial_cnt, error_cnt))
 
 
     # average metric data
@@ -344,7 +344,7 @@ def select_metric_from_scaling(scale_data, metric):
         try:
             metric_data[kt] = scale_data[kt][metric]
         except:
-            print "ERROR getting %s for thread %d" % (metric, kt)
+            print ("ERROR getting %s for thread %d" % (metric, kt))
 
     return metric_data
 
@@ -375,7 +375,7 @@ def scaling_plot(data, inclusive=True, plot=True, function="\[SUMMARY\] .TAU app
 
 def thread_bar_plots(data_dict, t_list, y=-1):
     for kt in t_list:
-        print "Thread Count: %d" % kt
+        print ("Thread Count: %d" % kt)
         data = list(data_dict[kt])
         matplotlib.pyplot.bar(range(len(data)), data)
         if y != -1:
