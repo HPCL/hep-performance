@@ -4,11 +4,12 @@ functions to add derived metrics to the dictionaries of metrics
 please use the examples to add more
 
 Existing list of prewritten metrics:
-add_IPC(metrics)          - Instructions per Cycle
-add_CPI(metrics)          - Cycles per instruction
-add_VIPC(metrics)         - vector instructions per cycle
-add_VIPI(metrics)         - vector instructions per instruction (i.e. fraction of total)
-add_L1_missrate(metrics)  - miss rate for L1 cache
+add_IPC(metrics)                - Instructions per Cycle
+add_CPI(metrics)                - Cycles per instruction
+add_VIPC(metrics)               - vector instructions per cycle
+add_VIPI(metrics)               - vector instructions per instruction (i.e. fraction of total)
+add_L1_missrate(metrics)        - miss rate for L1 cache
+add_DERIVED_BRANCH_MR(metrics)  - fraction of miss predicted branches 
 
 
 '''
@@ -208,6 +209,24 @@ def add_L3_missrate(metrics, llc=False):
         
     return True
 
+def add_DERIVED_BRANCH_MR(metrics):
+    if (not metrics.has_key('PAPI_BR_MSP')):
+        print 'ERROR adding DERIVED_BRANCH_MR to metric dictionary'
+        return False
+    a0 = metrics['PAPI_BR_MSP'].copy()
+    a0.index = a0.index.droplevel()
+    u0 = a0.unstack()
+    if (not metrics.has_key('PAPI_BR_CN')):
+        print 'ERROR adding DERIVED_BRANCH_MR to metric dictionary'
+        return False
+    a1 = metrics['PAPI_BR_CN'].copy()
+    a1.index = a1.index.droplevel()
+    u1 = a1.unstack()
+    metrics['DERIVED_BRANCH_MR'] = a0 / a1
+
+    return True
+
+
 def add_metric_to_scaling_data(data, metric_func, other=None):
     '''
     data is data with scaling information
@@ -271,11 +290,11 @@ def gen_metric(met_list, name):
 
     for m in range(len(met_list)):
 
-        func += "\tif (not metrics.has_key(" + met_list[m] + ")):\n"
+        func += "\tif (not metrics.has_key('" + met_list[m] + "')):\n"
         func += "\t\tprint 'ERROR adding " + name + " to metric dictionary'\n"
         func += "\t\treturn False"
 
-        func += "\ta" + str(m) + " = metrics[" + met_list[m] + "].copy()\n"
+        func += "\ta" + str(m) + " = metrics['" + met_list[m] + "'].copy()\n"
         func += "\ta" + str(m) + ".index = a" + str(m) + ".index.droplevel()\n"
         func += "\tu" + str(m) + " = a" + str(m) + ".unstack()\n"
     
@@ -292,11 +311,11 @@ def gen_metric_complete(met_list, operation, name):
 
     for m in range(len(met_list)):
 
-        func += "\tif (not metrics.has_key(" + met_list[m] + ")):\n"
+        func += "\tif (not metrics.has_key('" + met_list[m] + "')):\n"
         func += "\t\tprint 'ERROR adding " + name + " to metric dictionary'\n"
-        func += "\t\treturn False"
+        func += "\t\treturn False\n"
 
-        func += "\ta" + str(m) + " = metrics[" + met_list[m] + "].copy()\n"
+        func += "\ta" + str(m) + " = metrics['" + met_list[m] + "'].copy()\n"
         func += "\ta" + str(m) + ".index = a" + str(m) + ".index.droplevel()\n"
         func += "\tu" + str(m) + " = a" + str(m) + ".unstack()\n"
     

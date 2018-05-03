@@ -269,6 +269,11 @@ def remove_erroneous_threads(metric_data, thread_list):
 def combine_metrics(metric_dict,inc_exc='Inclusive'):
     if inc_exc == 'Inclusive': todrop = 'Exclusive'
     else: todrop = 'Inclusive'
+    
+    for m in metric_dict:
+        if (not m == 'METADATA') and ('DERIVED' not in m):
+            metric_dict[m].index = metric_dict[m].index.droplevel()
+    
     alldata = metric_dict['PAPI_TOT_CYC'].copy().drop(['Calls','Subcalls',todrop,'ProfileCalls'], axis=1)
     alldata['PAPI_TOT_CYC'] = alldata[inc_exc]
     alldata.drop([inc_exc],axis=1,inplace=True)
