@@ -437,6 +437,13 @@ def get_func_level_metric(data, inclusive=False, avg=True, func = 'NULL'):
 
     return metric_list
 
+
+def get_corr(alldata, method='pearson', metrics=['PAPI_TOT_CYC', 'PAPI_TOT_INS']):
+    correlations = alldata.corr(method).fillna(0)[metrics]    # Other methods: 'kendall', 'spearman'
+    return correlations.style.format("{:.2%}").background_gradient(cmap=cm)
+
+
+
 ############################################################################################
 
 #                                   Hotspots and related filtering functions
