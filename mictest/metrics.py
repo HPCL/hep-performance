@@ -11,6 +11,7 @@ add_VIPI(metrics)               - vector instructions per instruction (i.e. frac
 add_L1_missrate(metrics)        - miss rate for L1 cache
 add_DERIVED_BRANCH_MR(metrics)  - fraction of miss predicted branches 
 
+add_DERIVED_RATIO_FETCH_STL_TOT_CYC(metrics)
 
 '''
 
@@ -225,6 +226,26 @@ def add_DERIVED_BRANCH_MR(metrics):
     metrics['DERIVED_BRANCH_MR'] = a0 / a1
 
     return True
+
+
+
+def add_DERIVED_RATIO_FETCH_STL_TOT_CYC(metrics):
+    if (not metrics.has_key('PAPI_NATIVE_FETCH_STALL')):
+        print 'ERROR adding DERIVED_BRANCH_MR to metric dictionary'
+        return False
+    a0 = metrics['PAPI_BR_MSP'].copy()
+    a0.index = a0.index.droplevel()
+    u0 = a0.unstack()
+    if (not metrics.has_key('PAPI_TOT_CYC')):
+        print 'ERROR adding DERIVED_BRANCH_MR to metric dictionary'
+        return False
+    a1 = metrics['PAPI_BR_CN'].copy()
+    a1.index = a1.index.droplevel()
+    u1 = a1.unstack()
+    metrics['DERIVED_RATIO_FETCH_STL_TOT_CYC'] = a0 / a1
+
+    return True
+
 
 
 def add_metric_to_scaling_data(data, metric_func, other=None):
