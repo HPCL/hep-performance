@@ -454,7 +454,7 @@ def get_corr(alldata, method='pearson', metrics=['PAPI_TOT_CYC', 'PAPI_TOT_INS']
 
 
 def filter_libs_out(dfs):
-    dfs_filtered = dfs.groupby(level='region').filter(lambda x: not (x.name == '.TAU application') and ('tbb' not in x.name) and ('syscall' not in x.name)  and ('std::' not in x.name))
+    dfs_filtered = dfs.groupby(level='region').filter(lambda x: not (x.name == '.TAU application') and ('.TAU application ' not in x.name) and ('tbb' not in x.name) and ('syscall' not in x.name)  and ('std::' not in x.name))
     return dfs_filtered
 
 def largest_stddev(dfs,n):
