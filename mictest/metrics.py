@@ -120,6 +120,29 @@ def add_VIPI(metrics):
 
     return True
 
+def add_DERIVED_SP_VOPO(metrics):
+    if (not metrics.has_key('PAPI_SP_OPS')):
+        print 'ERROR adding DERIVED_SP_VOPO to metric dictionary'
+        return False
+    a0 = metrics['PAPI_SP_OPS'].copy()
+    a0.index = a0.index.droplevel()
+    u0 = a0.unstack()
+    if (not metrics.has_key('PAPI_NATIVE_FP_ARITH:128B_PACKED_SINGLE')):
+        print 'ERROR adding DERIVED_SP_VOPO to metric dictionary'
+        return False
+    a1 = metrics['PAPI_NATIVE_FP_ARITH:128B_PACKED_SINGLE'].copy()
+    a1.index = a1.index.droplevel()
+    u1 = a1.unstack()
+    if (not metrics.has_key('PAPI_NATIVE_FP_ARITH:256B_PACKED_SINGLE')):
+        print 'ERROR adding DERIVED_SP_VOPO to metric dictionary'
+        return False
+    a2 = metrics['PAPI_NATIVE_FP_ARITH:256B_PACKED_SINGLE'].copy()
+    a2.index = a2.index.droplevel()
+    u2 = a2.unstack()
+    metrics['DERIVED_SP_VOPO'] = ((u1 + u2) / (u0 )).stack()
+
+    return True
+
 
 def add_L1_missrate(metrics, lst=True):
     '''
@@ -223,7 +246,7 @@ def add_DERIVED_BRANCH_MR(metrics):
     a1 = metrics['PAPI_BR_CN'].copy()
     a1.index = a1.index.droplevel()
     u1 = a1.unstack()
-    metrics['DERIVED_BRANCH_MR'] = a0 / a1
+    metrics['DERIVED_BRANCH_MR'] = u0 / u1
 
     return True
 
@@ -231,18 +254,18 @@ def add_DERIVED_BRANCH_MR(metrics):
 
 def add_DERIVED_RATIO_FETCH_STL_TOT_CYC(metrics):
     if (not metrics.has_key('PAPI_NATIVE_FETCH_STALL')):
-        print 'ERROR adding DERIVED_BRANCH_MR to metric dictionary'
+        print 'ERROR adding DERIVED_RATIO_FETCH_STL_TOT_CYC to metric dictionary'
         return False
-    a0 = metrics['PAPI_BR_MSP'].copy()
+    a0 = metrics['PAPI_NATIVE_FETCH_STALL'].copy()
     a0.index = a0.index.droplevel()
     u0 = a0.unstack()
     if (not metrics.has_key('PAPI_TOT_CYC')):
-        print 'ERROR adding DERIVED_BRANCH_MR to metric dictionary'
+        print 'ERROR adding DERIVED_RATIO_FETCH_STL_TOT_CYC to metric dictionary'
         return False
-    a1 = metrics['PAPI_BR_CN'].copy()
+    a1 = metrics['PAPI_TOT_CYC'].copy()
     a1.index = a1.index.droplevel()
     u1 = a1.unstack()
-    metrics['DERIVED_RATIO_FETCH_STL_TOT_CYC'] = a0 / a1
+    metrics['DERIVED_RATIO_FETCH_STL_TOT_CYC'] = u0 / u1
 
     return True
 
@@ -342,7 +365,7 @@ def gen_metric_complete(met_list, operation, name):
     
         operation.replace(met_list[m], "u" + str(m))
 
-    func += "\tmetrics[" + name + "] = " + operation + "\n\n"
+    func += "\tmetrics['" + name + "'] = " + operation + "\n\n"
     func += "\treturn True\n\n\n"
         
     
