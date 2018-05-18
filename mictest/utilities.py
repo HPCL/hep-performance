@@ -3,6 +3,30 @@ Brian Gravelle, Boyana Norris
 
 Useful functions for processing mictest data in the python notebooks 
 This will evolve into a real library
+
+Data Structures:
+Currently these are somewhat in flux and poorly labeled accross functions,
+but the important data structures are listed here
+
+metric_data or metric_dict
+  - a dictionary of panda dataframes that holds the metrics
+  - each dictionary entry is a metric name (or METADATA) and a DF with the data
+  - metric data contains lots of info about each reading including thread, rank, context
+    also the region and the Inclusive and Exclusive values
+  - you get this by calling load_perf_data or get_pandas
+  - if from scaling data then there are 2 dictionary levels - num threads added above the metrics
+
+alldata 
+  - is a panda dataframe that combines these metrics into a single dataframe
+  - this keeps the thread, region and either Inclusive OR Exclusive
+  - get this by sending metric_data to combine_metrics
+
+
+dfs
+  - a data frame with data for one metric
+
+
+
 '''
 
 
@@ -213,7 +237,7 @@ def get_pandas_scaling(path, callpaths=False):
         if metric not in metric_data[num_threads].keys():
             metric_data[num_threads][metric] = []
 
-        metric_data[num_threads][metric].append(prof_data.summarize_samples())
+        metric_data[num_threads][metric].append(prof_data.summarize_samples(callpaths=callpaths))
         metric_data[num_threads][metric][-1].index.names = ['rank', 'context', 'thread', 'region']
         if not callpaths:
             # this line magically gets rid of the .TAU samples that otherwise unhelpfully dominate the data
@@ -454,7 +478,7 @@ def get_corr(alldata, method='pearson', metrics=['PAPI_TOT_CYC', 'PAPI_TOT_INS']
 
 
 def filter_libs_out(dfs):
-    dfs_filtered = dfs.groupby(level='region').filter(lambda x: not (x.name == '.TAU application') and ('.TAU application ' not in x.name) and ('tbb' not in x.name) and ('syscall' not in x.name)  and ('std::' not in x.name))
+    dfs_filtered = dfs.groupby(level='region').filter(lambda x: ('.TAU application =>' not in x.name) and ('tbb' not in x.name) and ('syscall' not in x.name)  and ('std::' not in x.name))
     return dfs_filtered
 
 def largest_stddev(dfs,n):

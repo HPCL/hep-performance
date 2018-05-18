@@ -246,7 +246,7 @@ def add_DERIVED_BRANCH_MR(metrics):
     a1 = metrics['PAPI_BR_CN'].copy()
     a1.index = a1.index.droplevel()
     u1 = a1.unstack()
-    metrics['DERIVED_BRANCH_MR'] = u0 / u1
+    metrics['DERIVED_BRANCH_MR'] = (u0 / u1).stack()
 
     return True
 
@@ -265,7 +265,7 @@ def add_DERIVED_RATIO_FETCH_STL_TOT_CYC(metrics):
     a1 = metrics['PAPI_TOT_CYC'].copy()
     a1.index = a1.index.droplevel()
     u1 = a1.unstack()
-    metrics['DERIVED_RATIO_FETCH_STL_TOT_CYC'] = u0 / u1
+    metrics['DERIVED_RATIO_FETCH_STL_TOT_CYC'] = (u0 / u1).stack()
 
     return True
 
