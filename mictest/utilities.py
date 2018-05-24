@@ -238,6 +238,7 @@ def get_pandas_scaling(path, callpaths=False):
             metric_data[num_threads][metric] = []
 
         metric_data[num_threads][metric].append(prof_data.summarize_samples(callpaths=callpaths))
+        # metric_data[num_threads][metric].append(prof_data.interval_data())
         metric_data[num_threads][metric][-1].index.names = ['rank', 'context', 'thread', 'region']
         if not callpaths:
             # this line magically gets rid of the .TAU samples that otherwise unhelpfully dominate the data
@@ -462,7 +463,7 @@ def get_func_level_metric(data, inclusive=False, avg=True, func = 'NULL'):
     return metric_list
 
 
-def get_corr(alldata, method='pearson', metrics=['PAPI_TOT_CYC', 'PAPI_TOT_INS']):
+def get_corr(alldata, cm, method='pearson', metrics=['PAPI_TOT_CYC', 'PAPI_TOT_INS']):
     correlations = alldata.corr(method).fillna(0)[metrics]    # Other methods: 'kendall', 'spearman'
     return correlations.style.format("{:.2%}").background_gradient(cmap=cm)
 
