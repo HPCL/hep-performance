@@ -121,7 +121,7 @@ def get_pandas_non_summary():
     
     return metric_data
 
-def load_perf_data(application,experiment,nolibs=False,scaling=False,callpaths=True):
+def load_perf_data(application,experiment,nolibs=False,scaling=False,callpaths=True,time=False):
     '''
         Return a Pandas dictionary from data in the detault path
         TODO filtering and scaling
@@ -138,7 +138,7 @@ def load_perf_data(application,experiment,nolibs=False,scaling=False,callpaths=T
             sys.exit("Error: invalid data path: %s" % path)
 
         if scaling:
-            metric_dict = get_pandas_scaling(path, callpaths=callpaths)
+            metric_dict = get_pandas_scaling(path, callpaths=callpaths, time=time)
         else:
             metric_dict = get_pandas(path,callpaths=callpaths)
     
