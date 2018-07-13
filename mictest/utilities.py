@@ -177,7 +177,7 @@ def get_pandas(path, callpaths=False):
         metric_data['METADATA'] = prof_data.metadata
     return metric_data
 
-def get_pandas_scaling(path, callpaths=False):
+def get_pandas_scaling(path, callpaths=False, time=False):
     '''
     returns a dictionary of dictionaries of pandas
     The first layer of keys is the number of threads
@@ -204,7 +204,10 @@ def get_pandas_scaling(path, callpaths=False):
     # puts it in metric data
     #    starts as dict (thread count) of dict (metrics) of list (individual trials)
     for p in paths:
-        d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
+        if time:
+            d = [f for f in listdir(p) if (not isfile(join(p, f))) and ((f == 'MULTI__TIME'))]
+        else:
+            d = [f for f in listdir(p) if (not isfile(join(p, f))) and (not (f == 'MULTI__TIME'))]
 
         try:
             trial_cnt +=1
@@ -219,6 +222,15 @@ def get_pandas_scaling(path, callpaths=False):
             # print( p ) # some trials don't have data use this to figure out which
             # missing data caused by errors in experiment scripts or crashes
 
+
+        prof_list = [f for f in listdir(trial_dir)]
+        num_threads = len(prof_list)
+
+        if num_threads not in metric_data.keys():
+            metric_data[num_threads] = {}
+        elif time:
+            continue
+
         try:
             prof_data = TauTrialProfileData.parse(trial_dir)
         except:
@@ -228,11 +240,6 @@ def get_pandas_scaling(path, callpaths=False):
 
         metric = prof_data.metric
 
-        prof_list = [f for f in listdir(trial_dir)]
-        num_threads = len(prof_list)
-
-        if num_threads not in metric_data.keys():
-            metric_data[num_threads] = {}
 
         if metric not in metric_data[num_threads].keys():
             metric_data[num_threads][metric] = []
