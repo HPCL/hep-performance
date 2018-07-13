@@ -120,6 +120,31 @@ def add_VIPI(metrics):
 
     return True
 
+def add_StallPercent(metrics):
+    '''
+    add vector instructions per ins to the metrics dictionary
+    returns true if successful
+    '''
+    CYC = 'PAPI_TOT_CYC'
+    STL = 'PAPI_RES_STL'
+    
+
+    if(not (metrics.has_key(STL) and metrics.has_key(CYC)) ):
+        print "ERROR adding StallPercent to metric dictionary"
+        return False
+    
+    cyc = metrics[CYC].copy()
+    stl = metrics[STL].copy()
+    cyc.index = cyc.index.droplevel()
+    stl.index = stl.index.droplevel()
+
+    ucyc = cyc.unstack()
+    ustl = stl.unstack()
+
+    metrics['DERIVED_STALL_PERCENT'] = (ustl / ucyc).stack()
+
+    return True
+
 def add_DERIVED_SP_VOPO(metrics):
     if (not metrics.has_key('PAPI_SP_OPS')):
         print 'ERROR adding DERIVED_SP_VOPO to metric dictionary'

@@ -44,6 +44,7 @@ from os import listdir
 from os.path import isfile, join
 
 import sys
+import shelve
 
 try:
     import taucmdr
@@ -120,25 +121,41 @@ def get_pandas_non_summary():
     
     return metric_data
 
-def load_perf_data(application,experiment,nolibs=False,scaling=False):
+def load_perf_data(application,experiment,nolibs=False,scaling=False,callpaths=True):
     '''
         Return a Pandas dictionary from data in the detault path
         TODO filtering and scaling
     '''
     path = ".tau/" + application + "/" + experiment + "/"
-    if not os.path.exists(path):
-        sys.exit("Error: invalid data path: %s" % path)
-
-    if scaling:
-        metric_dict = get_pandas_scaling(path)
+    key=application + ":" + experiment 
+    
+    if os.path.exists(key + '.shelve.dat'):
+         d = shelve.open(key+'.shelve',flag='r')
+         metric_dict = d[key]
+         d.close()
     else:
-        metric_dict = get_pandas(path)
+        if  not os.path.exists(path):
+            sys.exit("Error: invalid data path: %s" % path)
+
+        if scaling:
+            metric_dict = get_pandas_scaling(path, callpaths=callpaths)
+        else:
+            metric_dict = get_pandas(path,callpaths=callpaths)
     
     if nolibs and not scaling:
         filtered_dict = {}
         for k,v in metric_dict.items():
             if k == 'METADATA': filtered_dict[k] = metric_dict[k]
             else: filtered_dict[k] = filter_libs_out(metric_dict[k])
+        return filtered_dict
+    elif nolibs:
+        filtered_dict = {}
+        for threads,vals in metric_dict.items():
+            filtered_dict[threads] = {}
+            for k,v in vals.items():
+                if k == 'METADATA': filtered_dict[threads][k] = metric_dict[threads][k]
+                else: filtered_dict[threads][k] = filter_libs_out(metric_dict[threads][k])
+                #filtered_dict[threads][k] = filtered_dict[threads][k].replace('[SUMMARY] .TAU application  => [CONTEXT] .TAU application =>','')
         return filtered_dict
     else:
         return metric_dict
