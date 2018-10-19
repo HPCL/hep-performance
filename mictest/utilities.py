@@ -248,6 +248,7 @@ def get_pandas_scaling(path, callpaths=False, time=False):
         elif time:
             continue
 
+        # prof_data = TauTrialProfileData.parse(trial_dir)
         try:
             prof_data = TauTrialProfileData.parse(trial_dir)
         except:
