@@ -492,6 +492,28 @@ def get_corr(alldata, cm, method='pearson', metrics=['PAPI_TOT_CYC', 'PAPI_TOT_I
     correlations = alldata.corr(method).fillna(0)[metrics]    # Other methods: 'kendall', 'spearman'
     return correlations.style.format("{:.2%}").background_gradient(cmap=cm)
 
+def get_full_app_metric(data, inclusive=True, avg=True, func = 'application'):
+    '''
+    data is a panda dataframe of one metric and one thread count
+    returns a panda series of the metric averaged or summed over each thread
+    note: for certain derived metrics (i.e. ratios) this won't work because it sums
+    
+    TODO add filtering option data[n_thr] = filter_libs_out(data[n_thr])
+    '''
+    if inclusive: which='Inclusive'
+    else: which='Exclusive'
+        
+    group_data = data.groupby(['region'])[[which]]
+
+    if avg:
+        metric_list = group_data.mean().sort_values(by=which,ascending=False)[[which]]
+    else:
+        metric_list = group_data.sum().sort_values(by=which,ascending=False)[[which]]
+
+    if not func == 'NULL':
+        metric_list = metric_list[metric_list.index.get_level_values('region').str.endswith(func)][[which]]
+
+    return metric_list
 
 
 ############################################################################################
